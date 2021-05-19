@@ -262,7 +262,7 @@ def print_last_week_result(last_day: InternalDay, state: State) -> None:
     print(f"{n}{a}{rr}")
     with open('overhours.csv', mode='a') as overhours:
         overhours_writer = csv.writer(overhours,delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        overhours_writer.writerow(["Summe", delta_to_str(state.contract_over_hours)])
+        overhours_writer.writerow(["Summe (aktuelles Jahr)", delta_to_str(state.year_over_hours)])
 
 
 
