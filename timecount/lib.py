@@ -1,3 +1,6 @@
+import csv
+from dataclasses import dataclass, field as dc_field
+import sys
 import datetime
 import sys
 from dataclasses import dataclass
@@ -8,6 +11,11 @@ from typing import List, Optional, Tuple
 from .tctypes import *
 
 WEEKS_PER_YEAR = 52.1429
+
+
+with open('overhours.csv', mode='w') as overhours:
+        overhours_writer = csv.writer(overhours,delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        overhours_writer.writerow(["Tag/Kalenderwoche", "Menge Stunden gearbeitet/Überstunden pro Woche"])
 
 
 class C:
@@ -202,6 +210,9 @@ def print_day_result(day: InternalDay, entry: Day) -> None:
     b = f"{C.BLOCK}{day.blocks_str}{C.RS}"
     s = day.msg
     print(f"{a} {w} {m} {d} {n} {t} {b} {s}")
+    with open('overhours.csv', mode='a') as overhours:
+        overhours_writer = csv.writer(overhours,delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        overhours_writer.writerow([day.date, day.day_total_str])
 
 
 def fmt_over_hours(delta):
@@ -225,6 +236,10 @@ def print_week_result(day: InternalDay, state: State) -> None:
     wt = f"{C.GREY}Target: {C.TIME}{delta_to_str(state.week_target_hours)}{C.RS}"
     print(f"{a} {w} {m} {wt} {t}{col} {o}{C.RS_ALL}")
     print()
+    with open('overhours.csv', mode='a') as overhours:
+        overhours_writer = csv.writer(overhours,delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        overhours_writer.writerow([f"Summe Kalenderwoche {day.week_number:02d}", delta_to_str(state.week_over_hours)])
+
 
 
 def print_month_result(day: InternalDay, state: State) -> None:
@@ -276,6 +291,10 @@ def print_last_week_result(last_day: InternalDay, state: State) -> None:
     ]
     rr = "\n".join(r)
     print(f"{n}{a}{rr}")
+    with open('overhours.csv', mode='a') as overhours:
+        overhours_writer = csv.writer(overhours,delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        overhours_writer.writerow(["Summe", delta_to_str(state.contract_over_hours)])
+
 
 
 def print_current_week_result(last_day: InternalDay, state: State) -> None:
