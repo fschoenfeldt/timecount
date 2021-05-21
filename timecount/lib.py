@@ -11,7 +11,7 @@ WEEKS_PER_YEAR = 52.1429
 
 with open('overhours.csv', mode='w') as overhours:
         overhours_writer = csv.writer(overhours,delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        overhours_writer.writerow(["Tag/Kalenderwoche", "Menge Stunden gearbeitet/Überstunden pro Woche"])
+        overhours_writer.writerow(["Tag/Kalenderwoche","Menge Stunden gearbeitet/Überstunden pro Woche"])
 
 
 class C:
