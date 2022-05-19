@@ -212,6 +212,7 @@ def print_day_result(day: InternalDay, entry: Day) -> None:
     print(f"{a} {w} {m} {d} {n} {t} {b} {s}")
     with open('overhours.csv', mode='a') as overhours:
         overhours_writer = csv.writer(overhours,delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        # TODO add vacation or sick days!
         overhours_writer.writerow([f"{day.week_day_name[0:3]}, der {day.date}", day.day_total_str])
 
 
