@@ -47,10 +47,11 @@ def get_date_from_str(day_month_year: str) -> datetime.date:
     return datetime.date(*reversed([int(x) for x in day_month_year.split("-")]))
 
 
-def get_day_data(values: Tuple[DayValues, ...], automatically_deduct_breaks: Optional[str] = None) -> Tuple[timedelta, str, str]:
+def get_day_data(values: Tuple[DayValues, ...], automatically_deduct_breaks: Optional[str] = None) -> Tuple[timedelta, str, str, Optional[str]]:
     day_total_hours = timedelta(hours=0, minutes=0)
     blocks_str = ""
     msg = ""
+    break_deducted = None
 
     for block in values:
 
@@ -82,12 +83,12 @@ def get_day_data(values: Tuple[DayValues, ...], automatically_deduct_breaks: Opt
     if automatically_deduct_breaks == "german":
         if timedelta(hours=6) <= day_total_hours < timedelta(hours=9):
             day_total_hours -= timedelta(minutes=30)
-            msg += " (30 mins break deducted)"
+            break_deducted = "30 mins"
         elif day_total_hours >= timedelta(hours=9):
             day_total_hours -= timedelta(minutes=45)
-            msg += " (45 mins break deducted)"
+            break_deducted = "45 mins"
 
-    return day_total_hours, blocks_str, msg
+    return day_total_hours, blocks_str, msg, break_deducted
 
 
 def delta_to_str(delta: timedelta) -> str:
@@ -114,6 +115,7 @@ class InternalDay:
     day_total_hours: timedelta
     blocks_str: str
     msg: str
+    break_deducted: Optional[str]
     week_number: int
     week_day_number: int
     week_day_name: str
@@ -211,7 +213,12 @@ def print_day_result(day: InternalDay, entry: Day) -> None:
     n = f"{col}{day.week_day_name[0:3]}{C.RS}"
     b = f"{C.BLOCK}{day.blocks_str}{C.RS}"
     s = day.msg
-    print(f"{a} {w} {m} {d} {n} {t} {b} {s}")
+    break_deducted_str = f"{C.ITALIC}{C.GREY_DA} Break automatically deducted: {day.break_deducted}{C.RS_ALL}" if day.break_deducted else ""
+    print(f"{a} {w} {m} {d} {n} {t} {b} {s} {break_deducted_str}")
+    with open('overhours.csv', mode='a') as overhours:
+        overhours_writer = csv.writer(overhours,delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        # TODO add vacation or sick days!
+        overhours_writer.writerow([f"{day.week_day_name[0:3]}, der {day.date}", day.day_total_str])
 
 
 def fmt_over_hours(delta):
@@ -272,8 +279,13 @@ def print_last_week_result(last_day: InternalDay, state: State) -> None:
     n = (
         f"\n{C.ITALIC}{C.GREY_DA}Note: \n"
         + f"* Over hours for the 'Current Week' are not included in other stats.\n"
-        + f"* Holidays, VacationDays, SickDays, etc. reduce the week target hours.{C.RS}\n"
+        + f"* Holidays, VacationDays, SickDays, etc. reduce the week target hours.\n"
     )
+    if state.automatically_deduct_breaks:
+        n += (
+            f"* Breaks are automatically deducted according to "
+            f"'{state.automatically_deduct_breaks}' law.{C.RS}\n"
+        )
     a = f"\n= After Week {last_day.week_number - 1} = \n"
     r = [
         f"{C.GREY}Vacation Left : {C.TIME}{state.vacation_days_left} d",
@@ -373,7 +385,7 @@ def process(entries: List[Entry]) -> None:
 
             blocks_str = ""
             date = get_date_from_str(entry.date_str)
-            day_total_hours, blocks_str, msg = get_day_data(entry.values, automatically_deduct_breaks=state.automatically_deduct_breaks)
+            day_total_hours, blocks_str, msg, break_deducted = get_day_data(entry.values, automatically_deduct_breaks=state.automatically_deduct_breaks)
 
             cur_day = InternalDay(
                 date=date,
@@ -381,6 +393,7 @@ def process(entries: List[Entry]) -> None:
                 day_total_hours=day_total_hours,
                 blocks_str=blocks_str,
                 msg=msg,
+                break_deducted=break_deducted,
                 week_number=date.isocalendar()[1],
                 week_day_number=date.weekday(),
                 week_day_name=date.strftime("%A"),
