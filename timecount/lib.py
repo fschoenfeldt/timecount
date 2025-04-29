@@ -47,7 +47,7 @@ def get_date_from_str(day_month_year: str) -> datetime.date:
     return datetime.date(*reversed([int(x) for x in day_month_year.split("-")]))
 
 
-def get_day_data(values: Tuple[DayValues, ...]) -> Tuple[timedelta, str, str]:
+def get_day_data(values: Tuple[DayValues, ...], automatically_deduct_breaks: Optional[str] = None) -> Tuple[timedelta, str, str]:
     day_total_hours = timedelta(hours=0, minutes=0)
     blocks_str = ""
     msg = ""
@@ -78,6 +78,14 @@ def get_day_data(values: Tuple[DayValues, ...]) -> Tuple[timedelta, str, str]:
         duration = end - start
 
         day_total_hours += duration
+
+    if automatically_deduct_breaks == "german":
+        if timedelta(hours=6) <= day_total_hours < timedelta(hours=9):
+            day_total_hours -= timedelta(minutes=30)
+            msg += " (30 mins break deducted)"
+        elif day_total_hours >= timedelta(hours=9):
+            day_total_hours -= timedelta(minutes=45)
+            msg += " (45 mins break deducted)"
 
     return day_total_hours, blocks_str, msg
 
@@ -126,6 +134,8 @@ class State:
 
     vacation_days_per_year = 0.0
     vacation_days_left = 0.0
+
+    automatically_deduct_breaks: Optional[str] = None
 
     week_target_hours = timedelta(hours=0, minutes=0)
     week_total_hours = timedelta(hours=0, minutes=0)
@@ -316,6 +326,8 @@ def process(entries: List[Entry]) -> None:
 
             state.week_target_hours = entry.hours_per_week
 
+            state.automatically_deduct_breaks = entry.automatically_deduct_breaks
+
             print_contract_result(entry)
 
             continue
@@ -361,7 +373,7 @@ def process(entries: List[Entry]) -> None:
 
             blocks_str = ""
             date = get_date_from_str(entry.date_str)
-            day_total_hours, blocks_str, msg = get_day_data(entry.values)
+            day_total_hours, blocks_str, msg = get_day_data(entry.values, automatically_deduct_breaks=state.automatically_deduct_breaks)
 
             cur_day = InternalDay(
                 date=date,

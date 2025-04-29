@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+import sys
+
+sys.path.append("../timecount")
+
+
+from timecount import process
+from timecount.tctypes import (
+    EmploymentContract,
+    Balance,
+    Day,
+    HoliDay,
+    SickDay,
+    VacationDay,
+)
+
+# fmt: off
+entries_with_breaks = [
+    EmploymentContract(begin="01-04-2020", vacation_days_per_year=29, hours_per_week=30, workdays_per_week=4, automatically_deduct_breaks="german"),
+    
+    Day("01-04-2020", (08.00, 14.00), "6 hours work"),
+    Day("02-04-2020", (08.00, 17.00), "9 hours work"),
+    Day("03-04-2020", (08.00, 15.00), "7 hours work"),
+    Day("04-04-2020", (08.00, 13.00), "5 hours work"),
+]
+
+process(entries_with_breaks)
