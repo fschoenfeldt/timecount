@@ -215,10 +215,6 @@ def print_day_result(day: InternalDay, entry: Day) -> None:
     s = day.msg
     break_deducted_str = f"{C.ITALIC}{C.GREY_DA} Break automatically deducted: {day.break_deducted}{C.RS_ALL}" if day.break_deducted else ""
     print(f"{a} {w} {m} {d} {n} {t} {b} {s} {break_deducted_str}")
-    with open('overhours.csv', mode='a') as overhours:
-        overhours_writer = csv.writer(overhours,delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        # TODO add vacation or sick days!
-        overhours_writer.writerow([f"{day.week_day_name[0:3]}, der {day.date}", day.day_total_str])
 
 
 def fmt_over_hours(delta):
