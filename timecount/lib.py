@@ -53,6 +53,9 @@ def get_day_data(values: Tuple[DayValues, ...], automatically_deduct_breaks: Opt
     msg = ""
     break_deducted = None
 
+    # Collect all time blocks for break detection
+    time_blocks = []
+    
     for block in values:
 
         if isinstance(block, str):
@@ -78,15 +81,56 @@ def get_day_data(values: Tuple[DayValues, ...], automatically_deduct_breaks: Opt
         end = timedelta(hours=end_h, minutes=end_m)
         duration = end - start
 
+        # Store time block for break analysis
+        time_blocks.append((start, end))
         day_total_hours += duration
 
+    # Calculate breaks from gaps between time blocks (German law: must be continuous blocks)
+    detected_breaks = []
+    if len(time_blocks) > 1:
+        # Sort time blocks by start time to properly detect gaps
+        time_blocks.sort(key=lambda x: x[0])
+        
+        for i in range(len(time_blocks) - 1):
+            current_end = time_blocks[i][1]
+            next_start = time_blocks[i + 1][0]
+            
+            # Calculate gap between blocks
+            if next_start > current_end:
+                gap = next_start - current_end
+                # Only count gaps as breaks if they are reasonable (between 15 minutes and 4 hours)
+                if timedelta(minutes=15) <= gap <= timedelta(hours=4):
+                    detected_breaks.append(gap)
+
     if automatically_deduct_breaks == "german":
+        # German law requires specific continuous break blocks
         if timedelta(hours=6) <= day_total_hours < timedelta(hours=9):
-            day_total_hours -= timedelta(minutes=30)
-            break_deducted = "30 mins"
+            # Need 30 minutes continuous break
+            has_30min_break = any(gap >= timedelta(minutes=30) for gap in detected_breaks)
+            if has_30min_break:
+                break_deducted = "detected 30+ mins continuous break through gaps"
+            else:
+                day_total_hours -= timedelta(minutes=30)
+                break_deducted = "30 mins deducted"
         elif day_total_hours >= timedelta(hours=9):
-            day_total_hours -= timedelta(minutes=45)
-            break_deducted = "45 mins"
+            # Need 30 minutes + 15 minutes continuous breaks (can be separate blocks)
+            breaks_30min_or_more = [gap for gap in detected_breaks if gap >= timedelta(minutes=30)]
+            breaks_15min_or_more = [gap for gap in detected_breaks if gap >= timedelta(minutes=15)]
+            
+            has_30min_break = len(breaks_30min_or_more) >= 1
+            has_15min_break = len(breaks_15min_or_more) >= 2  # Need at least 2 breaks of 15min+ (one can serve as 30min)
+            
+            if has_30min_break and has_15min_break:
+                break_deducted = "detected 30+ mins + 15+ mins continuous breaks through gaps"
+            elif has_30min_break:
+                day_total_hours -= timedelta(minutes=15)
+                break_deducted = "detected 30+ mins continuous break + 15 mins deducted"
+            elif has_15min_break:
+                day_total_hours -= timedelta(minutes=30)
+                break_deducted = "detected 15+ mins continuous break + 30 mins deducted"
+            else:
+                day_total_hours -= timedelta(minutes=45)
+                break_deducted = "45 mins deducted"
 
     return day_total_hours, blocks_str, msg, break_deducted
 
