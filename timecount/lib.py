@@ -47,11 +47,15 @@ def get_date_from_str(day_month_year: str) -> datetime.date:
     return datetime.date(*reversed([int(x) for x in day_month_year.split("-")]))
 
 
-def get_day_data(values: Tuple[DayValues, ...]) -> Tuple[timedelta, str, str]:
+def get_day_data(values: Tuple[DayValues, ...], automatically_deduct_breaks: Optional[str] = None) -> Tuple[timedelta, str, str, Optional[str]]:
     day_total_hours = timedelta(hours=0, minutes=0)
     blocks_str = ""
     msg = ""
+    break_deducted = None
 
+    # Collect all time blocks for break detection
+    time_blocks = []
+    
     for block in values:
 
         if isinstance(block, str):
@@ -77,9 +81,58 @@ def get_day_data(values: Tuple[DayValues, ...]) -> Tuple[timedelta, str, str]:
         end = timedelta(hours=end_h, minutes=end_m)
         duration = end - start
 
+        # Store time block for break analysis
+        time_blocks.append((start, end))
         day_total_hours += duration
 
-    return day_total_hours, blocks_str, msg
+    # Calculate breaks from gaps between time blocks (German law: must be continuous blocks)
+    detected_breaks = []
+    if len(time_blocks) > 1:
+        # Sort time blocks by start time to properly detect gaps
+        time_blocks.sort(key=lambda x: x[0])
+        
+        for i in range(len(time_blocks) - 1):
+            current_end = time_blocks[i][1]
+            next_start = time_blocks[i + 1][0]
+            
+            # Calculate gap between blocks
+            if next_start > current_end:
+                gap = next_start - current_end
+                # Only count gaps as breaks if they are reasonable (between 15 minutes and 4 hours)
+                if timedelta(minutes=15) <= gap <= timedelta(hours=4):
+                    detected_breaks.append(gap)
+
+    if automatically_deduct_breaks == "german":
+        # German law requires specific continuous break blocks
+        if timedelta(hours=6) <= day_total_hours < timedelta(hours=9):
+            # Need 30 minutes continuous break
+            has_30min_break = any(gap >= timedelta(minutes=30) for gap in detected_breaks)
+            if has_30min_break:
+                break_deducted = "detected 30+ mins continuous break through gaps"
+            else:
+                day_total_hours -= timedelta(minutes=30)
+                break_deducted = "30 mins deducted"
+        elif day_total_hours >= timedelta(hours=9):
+            # Need 30 minutes + 15 minutes continuous breaks (can be separate blocks)
+            breaks_30min_or_more = [gap for gap in detected_breaks if gap >= timedelta(minutes=30)]
+            breaks_15min_or_more = [gap for gap in detected_breaks if gap >= timedelta(minutes=15)]
+            
+            has_30min_break = len(breaks_30min_or_more) >= 1
+            has_15min_break = len(breaks_15min_or_more) >= 2  # Need at least 2 breaks of 15min+ (one can serve as 30min)
+            
+            if has_30min_break and has_15min_break:
+                break_deducted = "detected 30+ mins + 15+ mins continuous breaks through gaps"
+            elif has_30min_break:
+                day_total_hours -= timedelta(minutes=15)
+                break_deducted = "detected 30+ mins continuous break + 15 mins deducted"
+            elif has_15min_break:
+                day_total_hours -= timedelta(minutes=30)
+                break_deducted = "detected 15+ mins continuous break + 30 mins deducted"
+            else:
+                day_total_hours -= timedelta(minutes=45)
+                break_deducted = "45 mins deducted"
+
+    return day_total_hours, blocks_str, msg, break_deducted
 
 
 def delta_to_str(delta: timedelta) -> str:
@@ -106,6 +159,7 @@ class InternalDay:
     day_total_hours: timedelta
     blocks_str: str
     msg: str
+    break_deducted: Optional[str]
     week_number: int
     week_day_number: int
     week_day_name: str
@@ -126,6 +180,8 @@ class State:
 
     vacation_days_per_year = 0.0
     vacation_days_left = 0.0
+
+    automatically_deduct_breaks: Optional[str] = None
 
     week_target_hours = timedelta(hours=0, minutes=0)
     week_total_hours = timedelta(hours=0, minutes=0)
@@ -201,7 +257,8 @@ def print_day_result(day: InternalDay, entry: Day) -> None:
     n = f"{col}{day.week_day_name[0:3]}{C.RS}"
     b = f"{C.BLOCK}{day.blocks_str}{C.RS}"
     s = day.msg
-    print(f"{a} {w} {m} {d} {n} {t} {b} {s}")
+    break_deducted_str = f"{C.ITALIC}{C.GREY_DA} Break automatically deducted: {day.break_deducted}{C.RS_ALL}" if day.break_deducted else ""
+    print(f"{a} {w} {m} {d} {n} {t} {b} {s} {break_deducted_str}")
 
 
 def fmt_over_hours(delta):
@@ -262,8 +319,13 @@ def print_last_week_result(last_day: InternalDay, state: State) -> None:
     n = (
         f"\n{C.ITALIC}{C.GREY_DA}Note: \n"
         + f"* Over hours for the 'Current Week' are not included in other stats.\n"
-        + f"* Holidays, VacationDays, SickDays, etc. reduce the week target hours.{C.RS}\n"
+        + f"* Holidays, VacationDays, SickDays, etc. reduce the week target hours.\n"
     )
+    if state.automatically_deduct_breaks:
+        n += (
+            f"* Breaks are automatically deducted according to "
+            f"'{state.automatically_deduct_breaks}' law.{C.RS}\n"
+        )
     a = f"\n= After Week {last_day.week_number - 1} = \n"
     r = [
         f"{C.GREY}Vacation Left : {C.TIME}{state.vacation_days_left} d",
@@ -316,6 +378,8 @@ def process(entries: List[Entry]) -> None:
 
             state.week_target_hours = entry.hours_per_week
 
+            state.automatically_deduct_breaks = entry.automatically_deduct_breaks
+
             print_contract_result(entry)
 
             continue
@@ -361,7 +425,7 @@ def process(entries: List[Entry]) -> None:
 
             blocks_str = ""
             date = get_date_from_str(entry.date_str)
-            day_total_hours, blocks_str, msg = get_day_data(entry.values)
+            day_total_hours, blocks_str, msg, break_deducted = get_day_data(entry.values, automatically_deduct_breaks=state.automatically_deduct_breaks)
 
             cur_day = InternalDay(
                 date=date,
@@ -369,6 +433,7 @@ def process(entries: List[Entry]) -> None:
                 day_total_hours=day_total_hours,
                 blocks_str=blocks_str,
                 msg=msg,
+                break_deducted=break_deducted,
                 week_number=date.isocalendar()[1],
                 week_day_number=date.weekday(),
                 week_day_name=date.strftime("%A"),

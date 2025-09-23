@@ -22,12 +22,14 @@ class EmploymentContract(Entry):
         vacation_days_per_year: int,
         hours_per_week: int,
         workdays_per_week: int,
+        automatically_deduct_breaks: str = None,
     ):
         self.begin = begin
         self.vacation_days_per_year = vacation_days_per_year
         self.workdays_per_week = workdays_per_week
         self.hours_per_week = timedelta(hours=hours_per_week)
         self.hours_per_workday = timedelta(hours=hours_per_week / workdays_per_week)
+        self.automatically_deduct_breaks = automatically_deduct_breaks
 
 
 @dataclass

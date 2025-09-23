@@ -1,3 +1,4 @@
 .vscode/
 timecount.egg-info/
+timecount/__pycache__/
 dist/
