@@ -71,6 +71,10 @@ ln -s ~/timelog ~/bin/timelog
 
 For a list of EntryTypes and their arguments, see `tctypes.py`.
 
+## Additional Features
+
+**Automatic break deduction** — Set `automatically_deduct_breaks="german"` on `EmploymentContract` to have breaks automatically deducted according to German labour law (30 min for shifts > 6 h, 45 min for shifts > 9 h). Breaks that are already visible as gaps between time blocks are detected and not deducted again.
+
 ## Examples
 
 Look in `./tests` for a more complete example.
