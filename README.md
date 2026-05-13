@@ -75,6 +75,8 @@ For a list of EntryTypes and their arguments, see `tctypes.py`.
 
 **BillAndReset** — Place `BillAndReset("30-04-2020", "RE-2026-0042 – Invoice created")` in your entries to mark a billing point. It prints the total billable hours accumulated since the last reset (or contract start) and then resets all hour counters so the next billing period starts fresh.
 
+**Automatic break deduction** — Set `automatically_deduct_breaks="german"` on `EmploymentContract` to have breaks automatically deducted according to German labour law (30 min for shifts > 6 h, 45 min for shifts > 9 h). Breaks that are already visible as gaps between time blocks are detected and not deducted again.
+
 ## Examples
 
 Look in `./tests` for a more complete example.
