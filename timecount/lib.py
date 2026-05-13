@@ -154,6 +154,14 @@ def print_contract_result(entry: EmploymentContract) -> None:
     print()
 
 
+def print_bill_and_reset_result(entry: BillAndReset, state: State) -> None:
+    a = f"{C.MONTH_SUM}BillAndReset{C.RS}"
+    d = f"{C.GREY}Date:{C.TIME}{entry.date_str}{C.RS}"
+    bill = f"{C.GREY}Billable:{C.OVER_GREEN}{delta_to_str(state.contract_total_hours)}{C.RS}"
+    n = f"{C.GREY}{entry.note}{C.RS}" if entry.note else ""
+    print(f"\n{a} {d} {bill} {n}{C.RS_ALL}\n")
+
+
 def print_balance_result(entry: Balance) -> None:
     a = f"{C.RED_TYPE}Balance    {C.GREY}"
     s = ""
@@ -317,6 +325,21 @@ def process(entries: List[Entry]) -> None:
             state.week_target_hours = entry.hours_per_week
 
             print_contract_result(entry)
+
+            continue
+
+        if isinstance(entry, BillAndReset):
+
+            print_bill_and_reset_result(entry, state)
+
+            state.contract_total_hours = timedelta(hours=0, minutes=0)
+            state.contract_over_hours = timedelta(hours=0, minutes=0)
+            state.week_total_hours = timedelta(hours=0, minutes=0)
+            state.week_over_hours = timedelta(hours=0, minutes=0)
+            state.month_total_hours = timedelta(hours=0, minutes=0)
+            state.month_over_hours = timedelta(hours=0, minutes=0)
+            state.year_total_hours = timedelta(hours=0, minutes=0)
+            state.year_over_hours = timedelta(hours=0, minutes=0)
 
             continue
 

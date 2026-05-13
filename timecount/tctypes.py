@@ -43,6 +43,12 @@ class Balance(Entry):
     note: str = ""
 
 
+@dataclass
+class BillAndReset(Entry):
+    date_str: str = ""
+    note: str = ""
+
+
 DayValues = Union[Tuple[float, float], str]
 
 

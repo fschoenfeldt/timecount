@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+import sys
+
+sys.path.append("../timecount")
+
+
+from timecount import process
+from timecount.tctypes import (
+    EmploymentContract,
+    Balance,
+    BillAndReset,
+    Day,
+    HoliDay,
+    SickDay,
+    VacationDay,
+)
+
+# fmt: off
+# Example: BillAndReset prints the accumulated contract hours/over-hours at
+# the point of invoicing and resets the counters so the next billing period
+# starts fresh.
+entries = [
+    Day("01-04-2020", (12.30, 20.00), (20.30, 01.15), "Configure Workstation"),
+    Day("02-04-2020", (14.30, 00.30), "Configure Workstation"),
+    Day("03-04-2020", (10.30, 15.00), "Configure Workstation"),
+    Day("06-04-2020", (10.00, 14.30), (17.00, 22.15), "Pair Programming Daniel."),
+
+    # Issue invoice RE-2026-0042 after the first week – reset hour counters.
+    BillAndReset("06-04-2020", "RE-2026-0042 – Rechnung erstellt"),
+
+    Day("07-04-2020", (10.30, 14.30), (15.30, 21.45), "Pair Programming Daniel."),
+    Day("08-04-2020", (09.30, 14.30), (15.00, 19.15), "BrowserStack validation; Laptop setup."),
+    Day("09-04-2020", (11.00, 15.00), (19.30, 22.00), "BrowserStack device list; Meeting; Try test automation."),
+    HoliDay("10-04-2020", (12.00, 13.00), "Karfreitag; Tooling"),
+    Day("11-04-2020", (11.00, 14.00), (21.15, 00.00), "Tooling, BrowserStack Testing."),
+    Day("12-04-2020", (11.15, 13.15), "System Setup; Tooling;"),
+
+    # Issue a second invoice after the second week.
+    BillAndReset("12-04-2020", "RE-2026-0043 – Rechnung erstellt"),
+
+    Day("14-04-2020", (11.00, 14.00), (15.30, 18.30), "Tooling; SlackMeetings; BrowserStack;"),
+    Day("15-04-2020", (10.30, 14.15), (15.30, 19.30), "BrowserStack Issue Support;"),
+]
+
+process(entries)
