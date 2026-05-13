@@ -71,6 +71,10 @@ ln -s ~/timelog ~/bin/timelog
 
 For a list of EntryTypes and their arguments, see `tctypes.py`.
 
+## Additional Features
+
+**BillAndReset** — Place `BillAndReset("30-04-2020", "RE-2026-0042 – Invoice created")` in your entries to mark a billing point. It prints the total billable hours accumulated since the last reset (or contract start) and then resets all hour counters so the next billing period starts fresh.
+
 ## Examples
 
 Look in `./tests` for a more complete example.
